@@ -1,69 +1,95 @@
 <script lang="ts">
   import axios from "axios";
+  import { onMount } from "svelte";
+  import ProgressBar from "@okrad/svelte-progressbar";
   import { downloadFile } from "./utils/download";
+  import WSLogic from "./utils/ws-logic";
+  import { fileDataStore, fileListStore } from "./utils/stores";
 
   const currentDomain = "http://localhost:3000";
+  const currentWS = "ws://localhost:8080";
 
   let fileList = [];
   let currentVideoSrc = "";
+  let series = 0;
+  let valueLabel = "0/0";
+  const wsLogic = new WSLogic(currentWS);
 
-  (async () => {
-    fileList = await fetch(`${currentDomain}/files`).then((x) => x.json());
-    console.log(fileList);
-  })();
+  onMount(async () => {
+    //fileList = await fetch(`${currentDomain}/files`).then((x) => x.json());
+    //console.log(fileList);
+
+    await wsLogic.init();
+
+    wsLogic.send("getFileList", "");
+  });
+
+  const formatBytes = (bytes, decimals = 2) => {
+    if (!+bytes) return "0 Bytes";
+
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+  };
+
+  fileListStore.subscribe((value) => {
+    fileList = value;
+  });
+
+  fileDataStore.subscribe(({ downloaded, length, fileName }) => {
+    console.log({ downloaded, length, fileName });
+    valueLabel = `${formatBytes(downloaded)}/${formatBytes(length)}`;
+  });
 
   const fileDL = async (file) => {
-    const response = await axios({
+    series = 0;
+
+    wsLogic.send("getFileData", { id: file.uid });
+    if (1 === 1) return;
+
+    const r = await axios({
       url: `${currentDomain}/file/${file.uid}`,
       method: "GET",
       responseType: "arraybuffer",
-      onDownloadProgress: (progress) => console.log(progress),
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+      onDownloadProgress: (progress) => {
+        series = progress.progress * 100;
+        valueLabel = `${formatBytes(progress.loaded)}/${formatBytes(
+          progress.total
+        )}`;
+        console.log(progress);
+      },
+    });
+    console.log("r", r);
+
+    if (1 === 1) return;
+    const response = await axios({
+      url: `${currentDomain}/file/${file.uid}`,
+      method: "GET",
+      responseType: "stream",
+      onDownloadProgress: (progress) => {
+        series = progress.progress * 100;
+        valueLabel = `${formatBytes(progress.loaded)}/${formatBytes(
+          progress.total
+        )}`;
+        console.log(progress);
+      },
     });
     downloadFile(response, file.fileName);
   };
 
   const fileWatch = async (file) => {
-    return (currentVideoSrc = `${currentDomain}/file/${file.uid}`);
-    const mediaSource = new MediaSource();
-    currentVideoSrc = window.URL.createObjectURL(mediaSource);
-
-    mediaSource.addEventListener("sourceopen", async () => {
-      const response = await fetch(`${currentDomain}/file`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ torrId: fileList?.magnetURI, fileId: fileName }),
-      });
-      const mimeCodec = response.headers.get("Content-Type");
-      console.log(mimeCodec);
-      const sourceBuffer = mediaSource.addSourceBuffer(mimeCodec);
-
-      const body = response.body;
-
-      const reader = body.getReader();
-
-      let streamNotDone = true;
-
-      while (streamNotDone) {
-        const { value, done } = await reader.read();
-
-        if (done) {
-          streamNotDone = false;
-          break;
-        }
-
-        await new Promise((resolve) => {
-          sourceBuffer.appendBuffer(value);
-
-          sourceBuffer.onupdateend = () => {
-            resolve(true);
-          };
-        });
-      }
-    });
+    currentVideoSrc = `${currentDomain}/file/${file.uid}`;
   };
 </script>
 
 <main>
+  <ProgressBar {series} {valueLabel} />
   <div id="output" />
 </main>
 
