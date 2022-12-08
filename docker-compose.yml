@@ -4,7 +4,7 @@ services:
     build:
       context: ./
       target: dev
-    command: npm run dev
+    command: npm run dev -- --host
     ports:
       - "5173:5173"
     environment:
