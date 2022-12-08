@@ -2,7 +2,7 @@ version: "3.8"
 services:
   web:
     build:
-      context: ./app
+      context: ./
       target: dev
     command: npm run dev
     ports:
