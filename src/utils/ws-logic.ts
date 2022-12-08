@@ -34,6 +34,14 @@ class WSLogic {
             console.error("Action parse error:", ex);
           }
         };
+
+        const t = setInterval(() => {
+          if (this.socket.readyState != 1) {
+            clearInterval(t);
+            return;
+          }
+          this.socket.send('{type:"ping"}');
+        }, 55000);
         resolve(true);
       };
     });
