@@ -8,6 +8,8 @@
 
   const currentDomain = "http://localhost:3000";
   const currentWS = "ws://localhost:8080";
+  let magnet =
+    "magnet:?xt=urn:btih:9733EC8340BA9F30A6118B8852AB48C55F8B955E&tr=http%3A%2F%2Fbt.t-ru.org%2Fann%3Fmagnet&dn=(Classic%20Rock%2C%20Hard%20Rock)%20Queen%20-%20The%20Miracle%20%5BCollector%27s%20Edition%5D%20(2022)%2C%20MP3%2C%20320%20kbps";
 
   let fileList = [];
   let currentVideoSrc = "";
@@ -21,7 +23,7 @@
 
     await wsLogic.init();
 
-    wsLogic.send("getFileList", "");
+    wsLogic.send("getFileList", { magnetURI: magnet });
   });
 
   const formatBytes = (bytes, decimals = 2) => {
@@ -95,6 +97,7 @@
 
 <ul>
   <video src={currentVideoSrc} autoplay={true} controls />
+  <input type="text" value={magnet} />
   {#each fileList as file}
     <li>
       <div on:keypress={() => fileDL(file)} on:click={() => fileDL(file)}>
