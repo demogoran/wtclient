@@ -99,6 +99,9 @@
 <ul>
   <video src={currentVideoSrc} autoplay={true} controls />
   <input type="text" value={magnet} />
+  <button on:click={() => wsLogic.send("getFileList", { magnetURI: magnet })}
+    >Get files</button
+  >
   {#each fileList as file}
     <li>
       <div on:keypress={() => fileDL(file)} on:click={() => fileDL(file)}>
